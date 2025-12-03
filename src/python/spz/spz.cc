@@ -352,6 +352,55 @@ NB_MODULE(spz, m) {
           nb::arg("gaussians"), nb::arg("options"), nb::arg("filename"),
           "Save a GaussianCloud to a *.spz* file.");
 
+    // In-memory version that returns bytes directly (faster, avoids file I/O)
+    m.def("save_spz_to_bytes",
+          [](const spz::GaussianCloud &gaussians, const spz::PackOptions &options) -> nb::bytes {
+              std::vector<uint8_t> data;
+              if (!spz::saveSpz(gaussians, options, &data)) {
+                  throw std::runtime_error("Failed to compress SPZ data");
+              }
+              return nb::bytes(reinterpret_cast<const char*>(data.data()), data.size());
+          },
+          nb::arg("gaussians"), nb::arg("options"),
+          R"doc(Compress a GaussianCloud to SPZ format and return as bytes.
+
+          This is faster than save_spz() as it avoids file I/O overhead.
+          
+          Args:
+              gaussians: The GaussianCloud to compress
+              options: PackOptions specifying coordinate system conversion
+              
+          Returns:
+              bytes: The compressed SPZ data
+              
+          Raises:
+              RuntimeError: If compression fails)doc");
+
+    // Fast in-memory version using Z_BEST_SPEED compression (much faster, slightly larger files)
+    m.def("save_spz_to_bytes_fast",
+          [](const spz::GaussianCloud &gaussians, const spz::PackOptions &options) -> nb::bytes {
+              std::vector<uint8_t> data;
+              if (!spz::saveSpzFast(gaussians, options, &data)) {
+                  throw std::runtime_error("Failed to compress SPZ data");
+              }
+              return nb::bytes(reinterpret_cast<const char*>(data.data()), data.size());
+          },
+          nb::arg("gaussians"), nb::arg("options"),
+          R"doc(Compress a GaussianCloud to SPZ format using fast compression.
+
+          This uses Z_BEST_SPEED (level 1) instead of Z_DEFAULT_COMPRESSION (level 6),
+          resulting in ~5-10x faster compression at the cost of ~10-20% larger files.
+          
+          Args:
+              gaussians: The GaussianCloud to compress
+              options: PackOptions specifying coordinate system conversion
+              
+          Returns:
+              bytes: The compressed SPZ data
+              
+          Raises:
+              RuntimeError: If compression fails)doc");
+
     m.def("load_splat_from_ply", (spz::GaussianCloud (*)(const std::string &, const spz::UnpackOptions &)) &spz::loadSplatFromPly,
           nb::arg("filename"), nb::arg("options") = spz::UnpackOptions(),
           "Read GaussianCloud data from a *.ply* file.");

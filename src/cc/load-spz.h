@@ -98,4 +98,12 @@ GaussianCloud loadSplatFromPly(const std::string &filename, const UnpackOptions 
 void serializePackedGaussians(const PackedGaussians &packed, std::ostream *out);
 
 bool compressGzipped(const uint8_t *data, size_t size, std::vector<uint8_t> *out);
+
+// Fast version with lower compression level (Z_BEST_SPEED instead of Z_DEFAULT_COMPRESSION)
+bool compressGzippedFast(const uint8_t *data, size_t size, std::vector<uint8_t> *out);
+
+// Fast version of saveSpz using Z_BEST_SPEED compression (faster, slightly larger files)
+bool saveSpzFast(
+  const GaussianCloud &gaussians, const PackOptions &options, std::vector<uint8_t> *output);
+
 }  // namespace spz

@@ -183,11 +183,11 @@ bool decompressGzipped(const uint8_t *compressed, size_t size, std::string *out)
 
 }  // namespace
 
-bool compressGzipped(const uint8_t *data, size_t size, std::vector<uint8_t> *out) {
+bool compressGzippedImpl(const uint8_t *data, size_t size, std::vector<uint8_t> *out, int compressionLevel) {
   std::vector<uint8_t> buffer(8192);
   z_stream stream = {};
   if (
-    deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 16 + MAX_WBITS, 9, Z_DEFAULT_STRATEGY)
+    deflateInit2(&stream, compressionLevel, Z_DEFLATED, 16 + MAX_WBITS, 9, Z_DEFAULT_STRATEGY)
     != Z_OK) {
     return false;
   }
@@ -211,6 +211,14 @@ bool compressGzipped(const uint8_t *data, size_t size, std::vector<uint8_t> *out
   }
   deflateEnd(&stream);
   return success;
+}
+
+bool compressGzipped(const uint8_t *data, size_t size, std::vector<uint8_t> *out) {
+  return compressGzippedImpl(data, size, out, Z_DEFAULT_COMPRESSION);
+}
+
+bool compressGzippedFast(const uint8_t *data, size_t size, std::vector<uint8_t> *out) {
+  return compressGzippedImpl(data, size, out, Z_BEST_SPEED);
 }
 
 void packQuaternionSmallestThree(uint8_t r[4], const float rotation[4], const CoordinateConverter& c) {
@@ -604,6 +612,17 @@ bool saveSpz(const GaussianCloud &g, const PackOptions &o, std::vector<uint8_t> 
     data = ss.str();
   }
   return compressGzipped(reinterpret_cast<const uint8_t *>(data.data()), data.size(), out);
+}
+
+bool saveSpzFast(const GaussianCloud &g, const PackOptions &o, std::vector<uint8_t> *out) {
+  std::string data;
+  {
+    PackedGaussians packed = packGaussians(g, o);
+    std::stringstream ss;
+    serializePackedGaussians(packed, &ss);
+    data = ss.str();
+  }
+  return compressGzippedFast(reinterpret_cast<const uint8_t *>(data.data()), data.size(), out);
 }
 
 PackedGaussians loadSpzPacked(const uint8_t *data, int32_t size) {
